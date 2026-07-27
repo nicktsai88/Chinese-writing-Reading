@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌸 國中教育會考 國文寫作模擬平台 📝</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sakura: {
+                            light: '#FDFBFB',   // 極淺的暖白/米灰
+                            base: '#F4DDDF',    // 櫻花粉主色
+                            primary: '#E58A9A', // 溫和的深粉紅
+                            dark: '#C86B7D',    // 更深的粉紅
+                            text: '#4A4A4A'     // 中性深灰色
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { font-family: '微軟正黑體', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #FDFBFB; color: #4A4A4A; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .calendar-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 1.1rem; transition: all 0.2s ease; }
+        .day-header { font-weight: bold; color: #C86B7D; text-align: center; padding: 4px; font-size: 1.2rem; }
+        .day-empty { background-color: transparent; }
+        .day-normal { background-color: #F9F1F2; color: #4A4A4A; border: 1px solid #F4DDDF; }
+        
+        /* 完成的日期樣式：加入互動性與點擊游標 */
+        .day-completed { background-color: #E58A9A; color: white; font-weight: bold; position: relative; box-shadow: 0 3px 6px rgba(229, 138, 154, 0.3); cursor: pointer; }
+        .day-completed:hover { background-color: #C86B7D; transform: translateY(-2px); box-shadow: 0 5px 10px rgba(200, 107, 125, 0.4); }
+        .day-completed::after { content: '🌸'; position: absolute; top: 2px; right: 2px; font-size: 0.7rem; }
+        
+        .loader { border: 4px solid #F4DDDF; border-top: 4px solid #E58A9A; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 12px; }
+        ::-webkit-scrollbar-track { background: #F9F1F2; border-radius: 6px; }
+        ::-webkit-scrollbar-thumb { background: #E58A9A; border-radius: 6px; }
+        ::-webkit-scrollbar-thumb:hover { background: #C86B7D; }
+
+        /* 防止英文字過長不換行導致跑版 */
+        .break-words { word-break: break-word; overflow-wrap: break-word; }
+
+        /* --- Markdown 報告專用渲染樣式 (字體全面加大) --- */
+        .markdown-body { color: #333333; line-height: 1.9; font-size: 1.25rem; }
+        @media (min-width: 768px) { .markdown-body { font-size: 1.35rem; } }
+        .markdown-body h1 { font-size: 2rem; font-weight: bold; color: #C86B7D; margin: 2rem 0 1rem; border-bottom: 3px solid #F4DDDF; padding-bottom: 0.5rem; }
+        .markdown-body h1:first-child { margin-top: 0; }
+        .markdown-body h2 { font-size: 1.75rem; font-weight: bold; color: #A64D5F; margin: 2rem 0 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .markdown-body h3 { font-size: 1.5rem; font-weight: bold; color: #E58A9A; margin: 1.5rem 0 0.5rem; }
+        .markdown-body h4 { font-size: 1.25rem; font-weight: bold; color: #4A4A4A; margin: 1.25rem 0 0.5rem; background-color: #F9F1F2; padding: 0.5rem 1rem; border-radius: 0.5rem; display: inline-block; }
+        .markdown-body p { margin-bottom: 1.2rem; }
+        .markdown-body ul { list-style-type: none; padding-left: 0.5rem; margin-bottom: 1.2rem; }
+        .markdown-body li { margin-bottom: 0.85rem; padding-left: 1.5rem; position: relative; }
+        .markdown-body li::before { content: '🎀'; position: absolute; left: 0; font-size: 1rem; }
+        .markdown-body strong { font-weight: 700; color: #A64D5F; background-color: #FFF0F3; padding: 0 4px; border-radius: 4px; }
+        .markdown-body blockquote { border-left: 6px solid #E58A9A; background-color: #FDFBFB; padding: 1.5rem; margin: 1.5rem 0; border-radius: 0 0.5rem 0.5rem 0; font-style: italic; color: #5C3A41; font-size: 1.4rem; line-height: 2; border: 1px solid #F4DDDF; }
+        .markdown-body blockquote p:last-child { margin-bottom: 0; }
+        
+        /* Table Styles */
+        .markdown-body table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; background-color: white; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #F4DDDF; }
+        .markdown-body th, .markdown-body td { border: 1px solid #F4DDDF; padding: 1.2rem 1.5rem; text-align: left; }
+        .markdown-body th { background-color: #F9F1F2; font-weight: bold; color: #A64D5F; white-space: nowrap; font-size: 1.2rem; }
+        .markdown-body tr:nth-child(even) { background-color: #FDFBFB; }
+        .markdown-body hr { border: 0; border-top: 3px dashed #F4DDDF; margin: 2.5rem 0; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-3"></div>
+
+    <!-- Top Navigation -->
+    <header class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
+        <div class="w-[96%] xl:w-[98%] max-w-none mx-auto px-4 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3 shrink-0">
+                <i class="fas fa-feather-alt text-sakura-primary text-3xl"></i>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 cursor-pointer truncate tracking-wide" onclick="appState.showView('dashboard')">國文寫作模擬平台 📝</h1>
+            </div>
+            <div class="flex items-center gap-4 sm:gap-6 shrink-0">
+                <a href="migration_tool.html" target="_blank" class="hidden sm:flex items-center gap-2 text-sm sm:text-base text-gray-600 hover:text-sakura-primary font-bold transition-colors bg-gray-50 hover:bg-pink-50 px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+                    <i class="fas fa-database text-sakura-dark"></i> 題庫管理後台
+                </a>
+                
+                <div id="connection-status" class="flex items-center gap-2 text-sm sm:text-base bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
+                    <div class="w-3 h-3 rounded-full bg-gray-400" id="status-light"></div>
+                    <span id="status-text" class="text-gray-600 font-bold hidden md:inline">初始化中... 🐾</span>
+                </div>
+                
+                <div id="header-user" class="hidden items-center gap-2 font-bold text-gray-700 bg-sakura-light px-4 py-2 rounded-full text-base sm:text-lg border border-sakura-base">
+                    <i class="fas fa-user-circle text-xl text-sakura-dark"></i>
+                    <span id="header-username" class="max-w-[100px] sm:max-w-[200px] truncate"></span>
+                    <button onclick="openApiModal()" class="ml-2 text-gray-400 hover:text-sakura-primary transition-colors" title="API 金鑰設定"><i class="fas fa-cog"></i></button>
+                    <button onclick="logout()" class="ml-2 text-gray-400 hover:text-red-500 transition-colors" title="登出"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow w-[96%] xl:w-[98%] max-w-none mx-auto px-4 py-8 relative flex flex-col items-center">
+
+        <!-- API Key Modal -->
+        <div id="api-key-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-[60] backdrop-blur-sm px-4">
+            <div class="bg-white p-8 rounded-3xl shadow-xl max-w-lg w-full border-2 border-sakura-base max-h-[90vh] overflow-y-auto">
+                <h3 class="text-2xl font-bold text-gray-800 mb-4"><i class="fas fa-shield-alt text-sakura-primary mr-3"></i>安全設定 API 金鑰 🔑</h3>
+                <p class="text-lg text-gray-600 mb-6 leading-relaxed">
+                    為了防止金鑰外洩，請將您的 API 金鑰輸入於此。<br>
+                    <span class="font-bold text-sakura-dark mt-2 block">此金鑰將只會安全地儲存於您的瀏覽器 (Local Storage) 中，不會寫入公開的程式碼喔！💖</span>
+                </p>
+                <input type="text" id="api-key-input" class="w-full px-5 py-4 text-xl rounded-xl border-2 border-gray-200 focus:outline-none focus:border-sakura-primary bg-gray-50 mb-6 font-mono" placeholder="請貼上您的 API Key (AIzaSy...)">
+                <div class="flex justify-end gap-4">
+                    <button onclick="closeApiModal()" class="px-6 py-3 text-xl text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors font-bold">關閉</button>
+                    <button onclick="saveApiKey()" class="px-6 py-3 text-xl bg-sakura-primary text-white hover:bg-sakura-dark rounded-xl transition-colors font-bold shadow-md">儲存並使用 ✨</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Content Modal -->
+        <div id="history-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[70] backdrop-blur-sm px-2 md:px-4">
+            <div class="bg-white rounded-3xl w-[98%] max-w-none h-[92vh] flex flex-col shadow-2xl overflow-hidden border-2 border-sakura-base">
+                <div class="p-6 border-b-2 border-sakura-base flex justify-between items-center bg-sakura-light shrink-0">
+                    <h3 class="text-3xl font-bold text-gray-800 flex items-center gap-3" id="history-modal-title">
+                        <i class="far fa-calendar-alt text-sakura-dark"></i> 練習紀錄 📖
+                    </h3>
+                    <button onclick="closeHistoryModal()" class="text-gray-400 hover:text-red-500 text-5xl leading-none transition-colors">&times;</button>
+                </div>
+                <div id="history-modal-content" class="p-6 md:p-10 overflow-y-auto flex-grow bg-white">
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. Login View -->
+        <div id="login-view" class="max-w-2xl w-full bg-white p-12 rounded-3xl shadow-xl border border-gray-100 view-section mt-12 relative overflow-hidden">
+            <!-- 裝飾背景 -->
+            <div class="absolute top-[-40px] right-[-30px] text-sakura-light opacity-60 transform rotate-12 text-9xl pointer-events-none">
+                🌸
+            </div>
+            
+            <div class="relative z-10">
+                <h2 class="text-4xl font-extrabold text-center text-gray-800 mb-6">🌸 國中會考【六級分範文】產生器 📝</h2>
+                
+                <!-- 激勵語錄 -->
+                <div class="bg-gradient-to-r from-sakura-light to-white p-6 rounded-2xl border-2 border-sakura-base mb-8 text-center shadow-sm">
+                    <p class="text-2xl text-sakura-dark font-extrabold mb-3 flex items-center justify-center gap-2">
+                        <i class="fas fa-book-reader text-sakura-primary"></i> 專救作文小白！每日一篇無痛升級 ✨
+                    </p>
+                    <p class="text-lg text-gray-700 font-bold">「不用死背！老師手把手帶你想、帶你寫，每天 10 分鐘，輕鬆看懂六級分奧秘！ 🌟」</p>
+                </div>
+                
+                <div class="mb-8">
+                    <label class="block text-xl font-bold text-gray-700 mb-4">請輸入您的姓名登入： 🙋‍♀️🙋‍♂️</label>
+                    <div class="flex gap-4">
+                        <input type="text" id="login-name" class="flex-grow px-6 py-4 text-xl w-full rounded-2xl border-2 border-gray-200 focus:outline-none focus:border-sakura-primary bg-gray-50" placeholder="例如：王小明">
+                        <button onclick="handleLogin()" class="bg-sakura-primary text-white px-10 py-4 text-xl rounded-2xl hover:bg-sakura-dark transition-colors shadow-md font-bold shrink-0">登入 🚀</button>
+                    </div>
+                </div>
+
+                <div class="border-t-2 border-gray-100 pt-8">
+                    <h3 class="text-lg font-bold text-gray-500 mb-5 flex items-center gap-2">
+                        <i class="fas fa-bolt text-yellow-500 text-xl"></i> 快速登入 (點擊頭像) ⚡
+                    </h3>
+                    <div id="quick-login-list" class="flex flex-wrap gap-3">
+                        <div class="text-lg text-gray-400 italic font-medium">載入中... 🐾</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Dashboard View -->
+        <div id="dashboard-view" class="hidden view-section w-full">
+            <div class="flex flex-col md:flex-row gap-8 w-full">
+                <!-- Left: Calendar Profile -->
+                <div class="w-full md:w-[35%] xl:w-[30%] bg-white p-8 rounded-3xl shadow-lg border border-gray-100 h-fit shrink-0">
+                    <div class="text-center mb-8">
+                        <div class="w-28 h-28 bg-sakura-light rounded-full mx-auto flex items-center justify-center text-sakura-primary text-5xl mb-5 shadow-inner border-2 border-sakura-base">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <h2 class="text-3xl font-extrabold break-words text-gray-800" id="dashboard-username">使用者</h2>
+                        <p class="text-lg text-gray-500 mt-2 font-bold">會考倒數準備中 🚀✨</p>
+                    </div>
+                    
+                    <div class="border-t-2 border-gray-100 pt-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-bold text-xl text-gray-700 flex items-center gap-2"><i class="far fa-calendar-check text-sakura-primary"></i> 寫作日曆 📅</h3>
+                            <div class="flex items-center gap-3 bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl text-gray-700 font-bold text-lg">
+                                <button onclick="changeMonth(-1)" class="hover:text-sakura-primary transition-colors p-1"><i class="fas fa-chevron-left"></i></button>
+                                <span id="calendar-month-year" class="text-lg tracking-wide min-w-[90px] text-center"></span>
+                                <button onclick="changeMonth(1)" class="hover:text-sakura-primary transition-colors p-1"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+                        <div class="calendar-grid mb-4">
+                            <div class="day-header">日</div><div class="day-header">一</div><div class="day-header">二</div><div class="day-header">三</div><div class="day-header">四</div><div class="day-header">五</div><div class="day-header">六</div>
+                        </div>
+                        <div id="calendar-body" class="calendar-grid"></div>
+                        <div class="mt-8 text-base text-gray-600 flex items-center justify-center gap-3 bg-sakura-light py-3 rounded-xl font-bold border border-sakura-base">
+                            <span class="w-5 h-5 inline-block bg-sakura-primary rounded shadow-sm relative"><span class="absolute top-[1px] right-[2px] text-[12px] text-white">🌸</span></span> 
+                            <span>表示當日有學習紀錄 <strong>(點擊複習 🎀)</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Daily Generator List -->
+                <div class="w-full md:w-[65%] xl:w-[70%] bg-white p-8 md:p-10 rounded-3xl shadow-lg border border-gray-100 flex-grow flex flex-col">
+                    <h2 class="text-3xl font-extrabold mb-8 text-gray-800 border-b-4 border-sakura-light pb-4 flex items-center gap-3">
+                        <i class="fas fa-magic text-sakura-primary"></i> 每日六級分範文產出庫 📚
+                    </h2>
+                    
+                    <div id="today-section" class="mb-8 p-1 bg-gradient-to-br from-pink-200 to-sakura-light rounded-3xl shadow-md">
+                        <div class="bg-white p-6 md:p-8 rounded-[22px] flex flex-col md:flex-row items-center gap-6">
+                            <div class="w-24 h-24 bg-pink-50 rounded-full flex items-center justify-center text-sakura-primary text-4xl shrink-0 border-4 border-white shadow-inner">
+                                <i class="fas fa-sun"></i>
+                            </div>
+                            <div class="flex-grow text-center md:text-left">
+                                <h3 class="text-2xl font-extrabold text-gray-800 mb-2">今日挑戰主題 🎯</h3>
+                                <p id="today-topic-title" class="text-xl text-sakura-dark font-bold mb-4">正在確認今日主題...</p>
+                                <button id="generate-today-btn" onclick="openReadingView(getTodayDateStr())" class="hidden bg-sakura-primary text-white px-8 py-3 rounded-full hover:bg-sakura-dark font-extrabold text-lg shadow-md transition-transform hover:-translate-y-1">
+                                    開始今日閱讀引導 🚀
+                                </button>
+                                <div id="today-loading" class="hidden flex items-center justify-center md:justify-start gap-3 text-sakura-primary font-bold">
+                                    <i class="fas fa-spinner fa-spin"></i> 老師正在為您編寫今日專屬教材，請稍候...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-gray-600 mb-4 flex items-center gap-2">
+                        <i class="fas fa-history text-gray-400"></i> 過往精選主題
+                    </h3>
+                    <div id="essay-list" class="space-y-4 overflow-y-auto pr-4 flex-grow min-h-[300px]">
+                        <div class="text-center text-gray-500 py-16"><i class="fas fa-spinner fa-spin text-4xl mb-4 text-sakura-primary"></i><br><span class="text-xl font-bold">載入歷史紀錄中... 🐾</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Reading Interface View (Replaces old Test View) -->
+        <div id="reading-view" class="hidden view-section w-[92%] xl:w-[85%] max-w-[1400px] mx-auto space-y-8">
+            <button onclick="appState.showView('dashboard')" class="text-gray-600 hover:text-sakura-primary mb-2 inline-flex items-center gap-2 font-extrabold text-xl transition-colors bg-white px-6 py-3 rounded-2xl shadow-sm border border-gray-200 w-fit">
+                <i class="fas fa-arrow-left"></i> 返回列表 🔙
+            </button>
+            
+            <div class="bg-white p-8 md:p-12 rounded-3xl shadow-xl border border-gray-100">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-gray-100 pb-6 mb-8 gap-4">
+                    <h2 class="text-3xl md:text-4xl font-extrabold text-gray-800 flex items-center gap-4">
+                        <i class="fas fa-book-open text-sakura-primary"></i> 寫作引導與範文賞析 📖
+                    </h2>
+                    <span id="reading-date" class="text-xl font-extrabold text-sakura-dark bg-sakura-light px-5 py-2 rounded-xl border border-sakura-base shadow-sm"></span>
+                </div>
+                
+                <!-- Markdown Content Area -->
+                <div id="reading-content" class="markdown-body bg-[#fdfbf7] p-8 md:p-10 rounded-2xl border-2 border-sakura-base shadow-inner">
+                </div>
+                
+                <!-- Mini Practice Area -->
+                <div class="mt-12 bg-white p-8 rounded-2xl border-2 border-gray-100 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-[-20px] right-[-20px] text-pink-50 text-9xl pointer-events-none transform -rotate-12"><i class="fas fa-pen"></i></div>
+                    <div class="relative z-10">
+                        <h3 class="text-2xl font-extrabold text-gray-800 mb-4 flex items-center gap-3">
+                            <i class="fas fa-pen-fancy text-sakura-primary text-3xl"></i> 今日小練筆 ✍️
+                        </h3>
+                        <p class="text-xl text-gray-600 mb-6 font-bold leading-relaxed">
+                            看完了老師的引導，現在換你大顯身手囉！<br>
+                            <span class="text-sakura-dark">請試著用今天學到的「思考方向」或「佳句修辭」，簡單寫下 1~3 句話吧！寫完就能獲得今天的櫻花印章！🌸</span>
+                        </p>
+                        <textarea id="mini-practice" class="w-full h-40 p-6 rounded-2xl border-2 border-gray-200 focus:border-sakura-primary bg-gray-50 text-xl font-serif text-gray-800 transition-colors shadow-inner" placeholder="例如：在人生的考卷上，我們不僅要寫出標準答案，更要... 
+(請在這裡大膽練習，寫錯也沒關係，老師為你加油！✨)"></textarea>
+                        
+                        <div class="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <span id="practice-status" class="text-lg font-bold text-gray-500 w-full text-center sm:text-left"></span>
+                            <button id="submit-practice-btn" onclick="submitPractice()" class="bg-sakura-primary text-white px-10 py-4 rounded-full hover:bg-sakura-dark font-extrabold text-2xl shadow-xl transition-all hover:-translate-y-1 flex items-center justify-center gap-3 shrink-0 w-full sm:w-auto">
+                                完成學習並蓋章！ 💮
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script type="module">
+        // --- Custom Toast Notification System ---
+        window.showToast = (message, type = 'info') => {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const bgColors = {
+                'error': 'bg-red-500',
+                'success': 'bg-pink-500',
+                'info': 'bg-gray-800'
+            };
+            
+            let icon = 'fa-info-circle';
+            if (type === 'error') icon = 'fa-exclamation-circle';
+            if (type === 'success') icon = 'fa-check-circle';
+
+            toast.className = `${bgColors[type] || bgColors['info']} text-white px-6 py-4 rounded-2xl shadow-2xl transform transition-all duration-300 translate-y-12 opacity-0 flex items-start gap-4 max-w-[90vw] sm:max-w-lg pointer-events-auto border border-white/20 z-[9999]`;
+            toast.innerHTML = `<i class="fas ${icon} mt-1.5 text-xl shrink-0"></i><div class="text-lg font-bold leading-relaxed break-words whitespace-pre-wrap">${message}</div>`;
+            
+            container.appendChild(toast);
+            
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-12', 'opacity-0');
+            });
+            
+            const duration = type === 'error' ? 5000 : 3000;
+            setTimeout(() => {
+                toast.classList.add('translate-y-12', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        };
+
+        // --- 2. Firebase Setup & Global State ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : '{"apiKey":"AIzaSyCan2_Rc26HsLkOPr0i5QrgdjAYyqcigJ0","authDomain":"english-reading-6b506.firebaseapp.com","projectId":"english-reading-6b506","storageBucket":"english-reading-6b506.firebasestorage.app","messagingSenderId":"494747176273","appId":"1:494747176273:web:585487fadb29b2e5e2d770","measurementId":"G-4JD6R9MRPQ"}';
+        const firebaseConfig = JSON.parse(firebaseConfigStr);
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'gept-writing-mock-v1'; 
+        const apiKey = ""; 
+
+        // 資料表結構設定 (變更為每日作文產生器庫)
+        const COL_DAILY_ESSAYS = 'TW-Exam-DailyEssays'; 
+        const DOC_GLOBAL = 'global';
+
+        let app, db, auth;
+        let currentUserUid = null;
+        let currentUserName = null;
+        let isFirebaseReady = false;
+        
+        let essaysData = {}; // 儲存每日產生的作文 (key: 日期字串, value: 作文物件)
+        let userProfileData = { completedDates: [], practiceTexts: {} };
+        let unsubscribeUser = null;
+        
+        let currentCalendarDate = new Date();
+        let selectedReadingDate = null;
+
+        // State Management
+        window.appState = {
+            currentView: 'login',
+            showView: async function(viewId) {
+                if(viewId === 'dashboard' && !currentUserName) {
+                    showToast("請先登入才能訪問此頁面喔！ 🥺", "error"); 
+                    return;
+                }
+                document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+                document.getElementById(`${viewId}-view`).classList.remove('hidden');
+                this.currentView = viewId;
+                
+                if (viewId === 'dashboard') {
+                    renderDashboard();
+                    window.scrollTo(0, 0);
+                }
+                if (viewId === 'reading') {
+                    await renderReadingArea(); 
+                }
+            }
+        };
+
+        // --- API Key Modal Logic ---
+        window.openApiModal = () => {
+            const storedKey = localStorage.getItem('gemini_api_key');
+            if(storedKey) document.getElementById('api-key-input').value = storedKey;
+            document.getElementById('api-key-modal').classList.remove('hidden');
+        };
+        window.closeApiModal = () => document.getElementById('api-key-modal').classList.add('hidden');
+        window.saveApiKey = () => {
+            const key = document.getElementById('api-key-input').value.trim();
+            if(key) {
+                localStorage.setItem('gemini_api_key', key);
+                closeApiModal();
+                showToast('✅ API 金鑰已安全儲存！ 💖', 'success');
+            } else {
+                showToast('請輸入有效的金鑰喔！', 'error');
+            }
+        };
+
+        function updateConnectionStatus(status, text) {
+            const light = document.getElementById('status-light');
+            const txt = document.getElementById('status-text');
+            txt.textContent = text;
+            light.className = 'w-3 h-3 rounded-full shrink-0 ' + 
+                (status === 'loading' ? 'bg-yellow-400 animate-pulse' : 
+                 status === 'success' ? 'bg-green-400' : 'bg-red-400');
+        }
+
+        async function initFirebase() {
+            try {
+                updateConnectionStatus('loading', '連線至資料庫... 🐾');
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (authError) {
+                    await signInAnonymously(auth);
+                }
+                
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        currentUserUid = user.uid;
+                        isFirebaseReady = true;
+                        
+                        listenToGlobalUsers();
+                        await loadDailyEssays(); // 載入每日題庫
+                        
+                        updateConnectionStatus('success', '資料庫已連線 🌸');
+                    } else {
+                        isFirebaseReady = false;
+                        currentUserUid = null;
+                    }
+                });
+            } catch (error) {
+                console.error("Firebase Init Error:", error);
+                updateConnectionStatus('error', '連線失敗 💦');
+                showToast('無法連線至資料庫', 'error');
+            }
+        }
+
+        // 載入雲端每日作文庫
+        async function loadDailyEssays() {
+            if (!currentUserUid) return;
+            
+            try {
+                // Rule 1: STRICT PATHS for public data
+                const qRef = collection(db, 'artifacts', appId, 'public', 'data', COL_DAILY_ESSAYS);
+                const qSnap = await getDocs(qRef);
+                
+                essaysData = {};
+                if (!qSnap.empty) {
+                    qSnap.forEach(doc => {
+                        essaysData[doc.id] = doc.data();
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to load essays:", error);
+            }
+            
+            if (appState.currentView === 'dashboard') {
+                renderDashboard();
+            }
+        }
+
+        function listenToGlobalUsers() {
+            if(!currentUserUid || !isFirebaseReady) return;
+            const globalRef = doc(db, 'artifacts', appId, 'public', 'data', 'TW-Exam-Global', DOC_GLOBAL);
+            
+            onSnapshot(globalRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.users && Array.isArray(data.users)) {
+                        const names = data.users.map(u => typeof u === 'string' ? u : u.name).filter(Boolean);
+                        const uniqueNames = [...new Set(names)].reverse();
+                        renderQuickLogin(uniqueNames);
+                    } else {
+                        renderQuickLogin([]);
+                    }
+                } else {
+                    renderQuickLogin([]);
+                }
+            }, (error) => {
+                console.error("Listen global error:", error);
+                updateConnectionStatus('error', '同步名單失敗');
+            });
+        }
+
+        window.handleLogin = async (nameOverride) => {
+            const nameInput = document.getElementById('login-name').value;
+            const finalName = (nameOverride || nameInput).trim();
+            if (!finalName) return showToast("請輸入您的姓名喔 🥺", "error");
+            if (!isFirebaseReady || !currentUserUid) return showToast("系統連線中，請稍候... 🐾", "info");
+
+            const loginBtn = document.querySelector('button[onclick="handleLogin()"]');
+            const originalText = loginBtn.innerText;
+            loginBtn.innerText = '登入中... 🚀';
+            loginBtn.disabled = true;
+
+            try {
+                const globalRef = doc(db, 'artifacts', appId, 'public', 'data', 'TW-Exam-Global', DOC_GLOBAL);
+                const globalSnap = await getDoc(globalRef);
+                let users = globalSnap.exists() ? globalSnap.data().users || [] : [];
+                
+                const stringUsers = users.map(u => typeof u === 'string' ? u : u.name).filter(Boolean);
+                if (!stringUsers.includes(finalName)) {
+                    stringUsers.push(finalName);
+                    await setDoc(globalRef, { users: stringUsers }, { merge: true });
+                }
+
+                currentUserName = finalName;
+                document.getElementById('header-user').classList.remove('hidden');
+                document.getElementById('header-user').classList.add('flex');
+                document.getElementById('header-username').textContent = finalName;
+                document.getElementById('dashboard-username').textContent = finalName + " 同學 🌟";
+
+                subscribeToUserData(finalName);
+                appState.showView('dashboard');
+                showToast(`歡迎回來，${finalName}！🌸\n準備好一起來看今天的超強範文了嗎？💪`, 'success');
+            } catch (e) {
+                console.error("Login Error:", e);
+                showToast("登入失敗，請檢查網路連線後重試 💦。", "error");
+            } finally {
+                loginBtn.innerText = originalText;
+                loginBtn.disabled = false;
+            }
+        };
+
+        function subscribeToUserData(userName) {
+            if (!currentUserUid) return;
+            if (unsubscribeUser) unsubscribeUser();
+            
+            // Rule 1: Private user data path
+            const userRef = doc(db, 'artifacts', appId, 'users', currentUserUid, 'Profile', 'data');
+            
+            unsubscribeUser = onSnapshot(userRef, async (docSnap) => {
+                if (docSnap.exists()) {
+                    userProfileData = docSnap.data();
+                    if(!userProfileData.completedDates) userProfileData.completedDates = [];
+                    if(!userProfileData.practiceTexts) userProfileData.practiceTexts = {};
+                } else {
+                    userProfileData = { completedDates: [], practiceTexts: {} };
+                    await setDoc(userRef, userProfileData);
+                }
+                
+                if(appState.currentView === 'dashboard') renderCalendar();
+            }, (err) => console.error("User data listen error", err));
+        }
+
+        window.logout = () => {
+            currentUserName = null;
+            userProfileData = { completedDates: [], practiceTexts: {} };
+            if(unsubscribeUser) unsubscribeUser();
+            document.getElementById('header-user').classList.add('hidden');
+            document.getElementById('header-user').classList.remove('flex');
+            document.getElementById('login-name').value = '';
+            appState.showView('login');
+            showToast("已登出 👋", "info");
+        };
+
+        function renderQuickLogin(users) {
+            const container = document.getElementById('quick-login-list');
+            if (users.length === 0) {
+                container.innerHTML = '<span class="text-lg text-gray-400 font-medium">尚無紀錄</span>';
+                return;
+            }
+            container.innerHTML = users.map(u => `
+                <button onclick="handleLogin('${u}')" class="bg-sakura-light text-sakura-dark px-5 py-2.5 rounded-full text-lg font-bold hover:bg-pink-100 transition border border-pink-200 shadow-sm flex items-center gap-2 max-w-full truncate">
+                    <i class="fas fa-user text-base shrink-0 text-pink-400"></i> <span class="truncate">${u}</span>
+                </button>
+            `).join('');
+        }
+
+        function getTodayDateStr() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        }
+
+        function renderDashboard() {
+            renderCalendar();
+            
+            const todayStr = getTodayDateStr();
+            const todayEssay = essaysData[todayStr];
+            
+            const todayTitleEl = document.getElementById('today-topic-title');
+            const generateBtn = document.getElementById('generate-today-btn');
+            
+            if (todayEssay) {
+                todayTitleEl.innerHTML = `<span class="text-2xl">${todayEssay.title}</span>`;
+                generateBtn.classList.remove('hidden');
+                generateBtn.innerHTML = '開始今日閱讀引導 🚀';
+                generateBtn.onclick = () => openReadingView(todayStr);
+            } else {
+                todayTitleEl.textContent = '老師尚未產生今日的教學內容喔！';
+                generateBtn.classList.remove('hidden');
+                generateBtn.innerHTML = '<i class="fas fa-magic"></i> 由 AI 老師生成今日課程 ✨';
+                generateBtn.onclick = generateTodayEssay;
+            }
+
+            const listContainer = document.getElementById('essay-list');
+            const dates = Object.keys(essaysData).sort((a, b) => new Date(b) - new Date(a)); // 降冪排列
+            
+            if (dates.length === 0) {
+                listContainer.innerHTML = '<div class="text-center text-gray-400 py-8 font-bold text-lg">目前還沒有歷史紀錄喔！快點擊上方按鈕產生第一篇吧！ 🌸</div>';
+                return;
+            }
+
+            listContainer.innerHTML = dates.map(date => {
+                const essay = essaysData[date];
+                const isCompleted = userProfileData.completedDates?.includes(date);
+                const statusIcon = isCompleted 
+                    ? `<i class="fas fa-check-circle text-green-500 text-3xl drop-shadow-sm" title="已完成學習 💮"></i>` 
+                    : `<i class="far fa-circle text-gray-300 text-3xl" title="尚未學習"></i>`;
+                
+                let btnClass = date === todayStr ? 'border-sakura-primary bg-pink-50' : 'border-gray-100 bg-[#FCF9F9]';
+
+                return `
+                <div class="flex items-center justify-between p-4 sm:p-5 rounded-2xl border-2 hover:shadow-md hover:border-pink-300 transition-all cursor-pointer gap-4 group ${btnClass}" onclick="openReadingView('${date}')">
+                    <div class="flex items-center gap-4 min-w-0">
+                        <div class="shrink-0 transition-transform group-hover:scale-110">${statusIcon}</div>
+                        <div class="min-w-0">
+                            <div class="text-sm text-gray-500 font-bold mb-1"><i class="far fa-calendar-alt"></i> ${date}</div>
+                            <div class="font-extrabold text-gray-800 text-xl truncate">${essay.title}</div>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right text-sakura-primary opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-xl shrink-0"></i>
+                </div>
+                `;
+            }).join('');
+        }
+
+        async function generateTodayEssay() {
+            if (!isFirebaseReady) return showToast("連線中，請稍候", "info");
+            
+            const btn = document.getElementById('generate-today-btn');
+            const loading = document.getElementById('today-loading');
+            btn.classList.add('hidden');
+            loading.classList.remove('hidden');
+            loading.classList.add('flex');
+            
+            try {
+                const todayStr = getTodayDateStr();
+                // 隨機抽選領域
+                const domains = ['親情與感恩', '校園與同儕', '社會觀察與反思', '面對挫折與成長', '想像力與創意', '生活哲理與體悟', '青春與夢想', '傳統與現代'];
+                const randomDomain = domains[Math.floor(Math.random() * domains.length)];
+                
+                const prompt = `請以「${randomDomain}」為領域，為國中生隨機設計一個會考作文題目。`;
+                const content = await callGeminiAPI(prompt);
+                
+                // 嘗試從回傳內容中解析標題
+                let title = "今日會考模擬題";
+                const titleMatch = content.match(/# 📝 今日會考模擬題：【(.*?)】/);
+                if (titleMatch && titleMatch[1]) {
+                    title = titleMatch[1].trim();
+                }
+
+                const essayData = {
+                    title: title,
+                    content: content,
+                    domain: randomDomain,
+                    createdAt: new Date().toISOString()
+                };
+
+                const essayRef = doc(db, 'artifacts', appId, 'public', 'data', COL_DAILY_ESSAYS, todayStr);
+                await setDoc(essayRef, essayData);
+                
+                essaysData[todayStr] = essayData;
+                showToast("今日課程產生成功！🎉", "success");
+                renderDashboard();
+                
+            } catch (error) {
+                console.error("Generate error:", error);
+                showToast("產生失敗：" + error.message, "error");
+                btn.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+                loading.classList.remove('flex');
+            }
+        }
+
+        window.changeMonth = (delta) => {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + delta);
+            renderCalendar();
+        };
+
+        function renderCalendar() {
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+            
+            document.getElementById('calendar-month-year').textContent = `${year}年 ${month + 1}月`;
+            
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            const calendarBody = document.getElementById('calendar-body');
+            let html = '';
+            
+            for (let i = 0; i < firstDay; i++) {
+                html += `<div class="calendar-day day-empty"></div>`;
+            }
+            
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const isCompleted = userProfileData.completedDates && userProfileData.completedDates.includes(dateString);
+                
+                if(isCompleted) {
+                    html += `<div class="calendar-day day-completed" onclick="openHistoryModal('${dateString}')" title="點擊查看當日紀錄">${i}</div>`;
+                } else {
+                    html += `<div class="calendar-day day-normal">${i}</div>`;
+                }
+            }
+            
+            calendarBody.innerHTML = html;
+        }
+
+        window.openHistoryModal = (dateStr) => {
+            // 直接導航到該日期的閱讀畫面
+            if (essaysData[dateStr]) {
+                openReadingView(dateStr);
+            } else {
+                showToast("這天老師沒有出題目喔！可以看看其他日期 🌸", "info");
+            }
+        };
+
+        window.openReadingView = (dateStr) => {
+            selectedReadingDate = dateStr;
+            appState.showView('reading');
+        };
+
+        window.closeHistoryModal = () => {
+            document.getElementById('history-modal').classList.add('hidden');
+        };
+
+        async function renderReadingArea() {
+            const essay = essaysData[selectedReadingDate];
+            if(!essay) {
+                appState.showView('dashboard');
+                return;
+            }
+
+            document.getElementById('reading-date').innerHTML = `<i class="far fa-calendar-check"></i> ${selectedReadingDate}`;
+            document.getElementById('reading-content').innerHTML = marked.parse(essay.content);
+            
+            const textarea = document.getElementById('mini-practice');
+            const statusText = document.getElementById('practice-status');
+            const btn = document.getElementById('submit-practice-btn');
+            
+            if (userProfileData.practiceTexts && userProfileData.practiceTexts[selectedReadingDate]) {
+                textarea.value = userProfileData.practiceTexts[selectedReadingDate];
+                textarea.disabled = true;
+                textarea.classList.add('bg-gray-100');
+                statusText.innerHTML = '<i class="fas fa-check-circle text-green-500"></i> 你已經完成這天的學習囉！💯';
+                btn.classList.add('hidden');
+            } else {
+                textarea.value = '';
+                textarea.disabled = false;
+                textarea.classList.remove('bg-gray-100');
+                statusText.innerHTML = '';
+                btn.classList.remove('hidden');
+            }
+            
+            window.scrollTo(0, 0);
+        }
+
+        window.submitPractice = async () => {
+            const text = document.getElementById('mini-practice').value.trim();
+            if (text.length < 5) {
+                showToast("小練筆請至少寫 5 個字喔！加油，老師相信你寫得出來！💪", "error");
+                return;
+            }
+            if (!currentUserUid) {
+                showToast("請先登入喔！ 💦", "error");
+                return;
+            }
+
+            const btn = document.getElementById('submit-practice-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 蓋章中...';
+            btn.disabled = true;
+
+            try {
+                let newDates = [...(userProfileData.completedDates || [])];
+                if (!newDates.includes(selectedReadingDate)) {
+                    newDates.push(selectedReadingDate);
+                }
+                
+                let newTexts = { ...(userProfileData.practiceTexts || {}) };
+                newTexts[selectedReadingDate] = text;
+
+                const userRef = doc(db, 'artifacts', appId, 'users', currentUserUid, 'Profile', 'data');
+                await setDoc(userRef, {
+                    completedDates: newDates,
+                    practiceTexts: newTexts
+                }, { merge: true });
+
+                showToast("太棒了！你獲得了今天的櫻花印章！🌸✨", "success");
+                renderReadingArea(); // refresh view
+
+            } catch(e) {
+                console.error("Submit practice error:", e);
+                showToast("存檔失敗，請確認網路連線 💦", "error");
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        };
+
+        async function callGeminiAPI(userMessage) {
+            const systemPrompt = `你是一位極度親切、專門拯救「作文零基礎、看到稿紙就怕」國中生的超強國文補教名師。
+請用「最白話、最口語、最溫柔、像大哥哥大姊姊在旁邊陪著聊天」的方式引導學生。不要用艱澀的學術名詞，把寫作拆解成最好玩的闖關遊戲。
+
+你的任務是根據我給的領域（或直接生成），設計一個國中會考風格的作文題目，並提供手把手的教學與六級分範文。
+請嚴格遵守以下 Markdown 格式輸出，不可遺漏單元，並多多使用 Emoji 增加親切感：
+
+# 📝 今日會考模擬題：【請發揮創意填寫題目名稱】
+> 💡 **題意說明：** (請給一段約 50-80 字的情境引導，類似會考題幹，讓學生知道這個題目在問什麼)
+
+---
+## 🧠 第一步：拿到題目怎麼辦？（破題與思考方向）
+*(用超級白話文教學生：拿到這個題目，第一秒腦袋要想什麼？給出 2-3 個「超好寫」的生活切入點。例如：「寫親情不要只寫媽媽生病照顧我，你可以寫...」)*
+
+## 🏗️ 第二步：段落積木怎麼排？（超簡單起承轉合）
+*(告訴學生四段要怎麼寫，字數不用多，但要給具體建議)*
+* **【起】開頭怎麼吸睛？：** (給個具體的開頭建議)
+* **【承】故事怎麼說？：** (教他們如何描述細節，要有畫面感)
+* **【轉】內心戲怎麼加？：** (這是拿高分的關鍵！教他們如何寫出轉折或成長)
+* **【合】結尾怎麼帥氣收場？：** (給個漂亮收尾的建議)
+
+## 🏆 第三步：老師示範！六級分滿分範文觀摩
+*(請寫出一篇約 500~600 字的完整範文。這篇範文要：情感真摯、結構完整、有使用修辭。但請注意：**語氣和內容要符合國中生的生活經驗**，不要寫得像老學究！)*
+
+## 💎 第四步：寫作百寶箱（偷學小撇步）
+* **🔥 老師超愛這句：** (挑出你剛剛範文裡寫得最棒的一句話)
+  * **💡 為什麼好？：** (用白話文解釋用了什麼技巧，例如：「這裡用了視覺摹寫，讓你好像真的看到...」)
+* **🌟 送你一句萬用金句：** (提供一句跟今天主題相關的名言佳句，並教他們可以塞在文章的哪裡)`;
+
+            const activeKey = localStorage.getItem('gemini_api_key') || apiKey;
+            // 使用 gemini-3-flash-preview 模型
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${activeKey}`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: userMessage }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: {
+                    temperature: 0.7 // 提高溫度讓範文更生動多樣
+                }
+            };
+
+            let retries = 5;
+            let delay = 1000;
+            
+            while (retries > 0) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!response.ok) throw new Error(`API HTTP Error: ${response.status}`);
+                    
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
+                        return result.candidates[0].content.parts[0].text;
+                    } else {
+                        throw new Error("API 回應格式異常");
+                    }
+
+                } catch (e) {
+                    retries--;
+                    if (retries === 0) throw e;
+                    // Exponential backoff
+                    await new Promise(r => setTimeout(r, delay));
+                    delay *= 2; 
+                }
+            }
+        }
+
+        function renderFeedback(markdownData) {
+            const contentContainer = document.getElementById('fb-content');
+            
+            if (!markdownData) {
+                contentContainer.innerHTML = `<div class="p-6 bg-red-50 text-red-700 rounded-xl text-lg font-bold"><i class="fas fa-exclamation-triangle mr-2"></i> 批改報告產出失敗，請重新提交。</div>`;
+                return;
+            }
+
+            contentContainer.innerHTML = marked.parse(markdownData);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initFirebase();
+            updateWordCount();
+        });
+
+    </script>
+</body>
+</html>
