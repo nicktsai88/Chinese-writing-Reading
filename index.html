@@ -262,7 +262,7 @@
                 </div>
                 
                 <!-- Markdown Content Area -->
-                <div id="reading-content" class="markdown-body bg-[#fdfbf7] p-8 md:p-10 rounded-2xl border-2 border-sakura-base shadow-inner">
+                <div id="reading-content" class="markdown-body bg-white p-8 md:p-10 rounded-2xl border-2 border-sakura-base shadow-inner">
                 </div>
                 
                 <!-- Mini Practice Area -->
@@ -332,12 +332,13 @@
         const firebaseConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : '{"apiKey":"AIzaSyCan2_Rc26HsLkOPr0i5QrgdjAYyqcigJ0","authDomain":"english-reading-6b506.firebaseapp.com","projectId":"english-reading-6b506","storageBucket":"english-reading-6b506.firebasestorage.app","messagingSenderId":"494747176273","appId":"1:494747176273:web:585487fadb29b2e5e2d770","measurementId":"G-4JD6R9MRPQ"}';
         const firebaseConfig = JSON.parse(firebaseConfigStr);
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'gept-writing-mock-v1'; 
+        // 更新 appId 以區隔不同的應用程式資料
+        const appId = typeof __app_id !== 'undefined' ? __app_id + '-essay-generator' : 'gept-writing-mock-v1-essay-generator'; 
         const apiKey = ""; 
 
-        // 資料表結構設定 (變更為每日作文產生器庫)
-        const COL_DAILY_ESSAYS = 'TW-Exam-DailyEssays'; 
-        const DOC_GLOBAL = 'global';
+        // 資料表結構設定 (變更為每日作文產生器庫專屬)
+        const COL_DAILY_ESSAYS = 'TW-Exam-DailyEssays-Gen'; 
+        const DOC_GLOBAL = 'global-gen';
 
         let app, db, auth;
         let currentUserUid = null;
