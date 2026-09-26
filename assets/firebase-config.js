@@ -1,0 +1,1 @@
+export const firebaseConfig = {"apiKey":"AIzaSyCan2_Rc26HsLkOPr0i5QrgdjAYyqcigJ0","authDomain":"english-reading-6b506.firebaseapp.com","projectId":"english-reading-6b506","storageBucket":"english-reading-6b506.firebasestorage.app","messagingSenderId":"494747176273","appId":"1:494747176273:web:585487fadb29b2e5e2d770","measurementId":"G-4JD6R9MRPQ"};
