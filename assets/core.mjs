@@ -40,7 +40,11 @@ export async function geminiJSON({key,model='gemini-3.8-flash',system,prompt,fet
     method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},signal:AbortSignal.timeout(120000),
     body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.6,responseMimeType:'application/json'}})
   });
-  if(!response.ok) throw new Error(({400:'AI 設定或金鑰無效',401:'AI 金鑰驗證失敗',403:'AI 金鑰權限不足',404:'找不到所選 AI 模型',429:'AI 額度不足或請求過於頻繁，請稍後重試'})[response.status]||'AI 服務暫時無法使用（'+response.status+'）');
+  if(!response.ok) {
+    const error=new Error(({400:'AI 設定或金鑰無效',401:'AI 金鑰驗證失敗',403:'AI 金鑰權限不足',404:'找不到所選 AI 模型',429:'AI 額度不足或請求過於頻繁，請稍後重試'})[response.status]||'AI 服務暫時無法使用（'+response.status+'）');
+    error.status=response.status;
+    throw error;
+  }
   const body=await response.json();
   const content=body.candidates?.[0]?.content?.parts?.filter(p=>!p.thought).map(p=>p.text||'').join('');
   if(!content) throw new Error('AI 沒有傳回內容，請調整文字後重試');
