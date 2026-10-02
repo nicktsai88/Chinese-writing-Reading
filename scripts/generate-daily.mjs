@@ -1,5 +1,5 @@
 import {readFile,writeFile} from 'node:fs/promises';
-import {geminiJSON,lessonInstructions,validateLesson,taipeiDate,countWords,ranges,labels} from '../assets/core.mjs';
+import {geminiJSON,lessonInstructions,validateLesson,validateShortEssay,taipeiDate,countWords,ranges,labels} from '../assets/core.mjs';
 const file=new URL('../data/lessons.json',import.meta.url);
 const data=JSON.parse((await readFile(file,'utf8')).replace(/^\uFEFF/,''));
 const date=taipeiDate();
@@ -33,7 +33,7 @@ while(!lesson){
       '修訂以下同一篇教材，不要重新選題。保留合格段落，只擴寫或精簡不合格段落。字數不含標點空白，不要以重複句子湊字。修訂後同步更新解析與佳句，title必須與題幹指定的題目一致。回傳完整教材JSON。\n'+measurements+'\n其他檢查：'+lastError+'\n上一版全文：'+JSON.stringify(candidate):
       '日期：'+date+'。避免重複最近題目：'+JSON.stringify(previous)+'。title必須與題幹指定的題目一致。四段請以95、255、270、130字為目標。'+lastError;
     candidate=await geminiJSON({key,model:models[modelIndex],system:lessonInstructions,prompt});
-    validateLesson(candidate);lesson=candidate;
+    validateLesson(candidate);validateShortEssay(candidate.shortParagraphs);lesson=candidate;
     console.log('Paragraph counts: '+lesson.paragraphs.map(countWords).join(', '));break;
   }catch(error){
     lesson=null;
